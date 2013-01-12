@@ -12,11 +12,23 @@ class IRCBotBase:
             self.set_terminator(b"\r\n")
             self.connected = False
             self._incoming = []
-    
+
+            # Autoreconnect majick
+            self._endp = (host, port)
+            self._reconnect_attempts = 0
+
+
             # asynchat socket init
             asynchat.async_chat.__init__(self)
             self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.connect((host, port))
+            self._attempt_connect()
+
+        def _attempt_connect(self):
+            if self._reconnect_attempts < 10:
+                self._reconnect_attempts += 1
+                self.connect(self._endp)
+            else:
+                raise ConnectionFailedError()
 
         def collect_incoming_data(self, data):
             self._incoming.append(data)
@@ -28,16 +40,23 @@ class IRCBotBase:
                 raise NotConnectedError()
 
         def handle_close(self):
-            raise NotImplementedError()
+            self.connected = False
+            # Attempt to reconnect
+            self._attempt_connect()
 
         def handle_connect(self):
             self.connected = True
+            self._reconnect_attempts = 0
             self.send_cmd("NICK %s" % self._parent._nick_name)
             self.send_cmd("USER aitrus 0 *:%s" % self._parent._real_name)
             self._parent.handle_connect()
 
         def handle_error(self):
-            raise # we want detailed errors
+            if not self.connected:
+                # Failed to connect. Try again
+                self._attempt_connect()
+            else:
+                raise # we want detailed errors
 
         def found_terminator(self):
             def get_message(raw, data, start):
@@ -136,7 +155,15 @@ class IRCBotBase:
 
 class NotConnectedError(Exception):
     """This error is raised when you attempt to do an operation that requires
-       a connection but no connection is established."""
+       a connection but no connection is established.
+    """
+    pass
+
+
+class ConnectionFailedError(Exception):
+    """This error is raised when a connection fails to be established after
+       ten attempts.
+    """
     pass
 
 
