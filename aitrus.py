@@ -24,7 +24,7 @@ class AitrusBot(IRCBotBase):
         elif msg == "TIME":
             self.send_nctcp(sender, "TIME keeps on slippin', slippin'")
 
-    def handle_kick(self, channel, reason):
+    def handle_kick(self, channel, oper, reason):
         # auto rejoin kicked channels
         self.join_channel(channel)
 

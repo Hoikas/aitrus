@@ -69,8 +69,7 @@ class IRCBotBase:
                 channel = data[2] # no leading colon
                 reason = data[3][1:] # leading colon
                 self._parent._channels = [i for i in self._parent._channels if i != channel]
-                # FIXME: include kicker name?
-                self._parent.handle_kick(channel, reason)
+                self._parent.handle_kick(channel, sender, reason)
             elif cmd == "PRIVMSG":
                 msg = get_message(raw, data, 3)
                 if msg.startswith("\u0001"):
@@ -99,7 +98,7 @@ class IRCBotBase:
     def handle_join(self, channel):
         pass
 
-    def handle_kick(self, channel, reason):
+    def handle_kick(self, channel, oper, reason):
         pass
 
     def handle_message(self, channel, user, msg):
